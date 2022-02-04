@@ -1,8 +1,10 @@
 use std::path::PathBuf;
 
-use clap::ArgEnum;
 use clap::Parser;
 use clap::Subcommand;
+
+use s4installer::InstallRegistry;
+use s4installer::InstallType;
 
 #[derive(Parser, Debug)]
 #[clap(
@@ -45,22 +47,18 @@ enum AppSubCommand {
     },
 }
 
-#[derive(ArgEnum, Debug, PartialEq, Clone, Copy)]
-enum InstallType {
-    Copy,
-    Lnk,
-    Sym,
-    Pwsh,
-}
-
-#[derive(ArgEnum, Debug, PartialEq, Clone, Copy)]
-#[clap(rename_all = "lower")]
-enum InstallRegistry {
-    Cli,
-    SendTo,
-}
-
 fn main() {
     let arg: AppArg = AppArg::parse();
     dbg!(&arg);
+    match arg.subcommand {
+        AppSubCommand::Install {
+            install_type,
+            install_for,
+            path_to_program,
+        } => s4installer::install(install_type, install_for, path_to_program),
+        AppSubCommand::Uninstall { from, program_name } => {
+            s4installer::uninstall(from, program_name)
+        }
+        AppSubCommand::List { installed_in } => s4installer::list(installed_in),
+    }
 }
