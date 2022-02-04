@@ -1,8 +1,10 @@
 [package]
 name = "s4installer"
-version = "0.1.0"
+version = "0.0.0"
 edition = "2021"
+authors = ["yuma140902"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+clap = { version = "3", features = ["derive"] }
