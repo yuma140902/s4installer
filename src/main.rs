@@ -60,7 +60,7 @@ fn main() {
             install_for,
             name,
             path_to_program,
-        } => s4installer::install(install_type, install_for, name, path_to_program),
+        } => s4installer::install(install_type, install_for, &name, path_to_program),
         AppSubCommand::Uninstall { from, program_name } => {
             s4installer::uninstall(from, program_name)
         }

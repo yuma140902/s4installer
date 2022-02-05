@@ -23,8 +23,8 @@ pub enum InstallRegistry {
 pub fn install(
     install_type: InstallType,
     install_registry: InstallRegistry,
-    name: Option<String>,
-    program: PathBuf,
+    name: &Option<String>,
+    program: impl AsRef<Path>,
 ) {
     let result = match install_registry {
         InstallRegistry::Cli => install_cli(install_type, &name, &program),
@@ -48,9 +48,9 @@ enum InstallError {
 fn install_cli(
     install_type: InstallType,
     name: &Option<String>,
-    program: &PathBuf,
+    program: impl AsRef<Path>,
 ) -> Result<(), InstallError> {
-    if !program.is_file() {
+    if !program.as_ref().is_file() {
         return Err(InstallError::NoProgram);
     }
 
@@ -68,9 +68,9 @@ fn install_cli(
 fn install_sendto(
     install_type: InstallType,
     name: &Option<String>,
-    program: &PathBuf,
+    program: impl AsRef<Path>,
 ) -> Result<(), InstallError> {
-    if !program.is_file() {
+    if !program.as_ref().is_file() {
         return Err(InstallError::NoProgram);
     }
 
@@ -85,11 +85,11 @@ fn install_sendto(
 }
 
 fn install_copy(
-    target_dir: &PathBuf,
+    target_dir: impl AsRef<Path>,
     name: &Option<String>,
-    program: &PathBuf,
+    program: impl AsRef<Path>,
 ) -> Result<(), InstallError> {
-    let dest = get_destination_file(target_dir, name, program, None)
+    let dest = get_destination_file(target_dir, name, &program, None)
         .map_err(|_| InstallError::NoProgram)?;
     if dest.is_file() {
         return Err(InstallError::AlreadyExists);
@@ -97,7 +97,7 @@ fn install_copy(
 
     eprintln!(
         "copying `{}` to `{}`",
-        program.to_string_lossy(),
+        program.as_ref().to_string_lossy(),
         dest.to_string_lossy()
     );
     fs::copy(program, dest).map_err(|err| InstallError::FileIO(err))?;
