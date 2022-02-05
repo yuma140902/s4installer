@@ -67,9 +67,9 @@ fn install_cli_copy(s4dir: &PathBuf, program: &PathBuf) -> Result<(), InstallErr
         program.to_string_lossy(),
         dest.to_string_lossy()
     );
-    fs::copy(program, dest)
-        .map_err(|err| InstallError::FileIO(err))
-        .map(|_| ())
+    fs::copy(program, dest).map_err(|err| InstallError::FileIO(err))?;
+
+    Ok(())
 }
 
 fn install_cli_lnk(s4dir: &PathBuf, program: &PathBuf) -> Result<(), InstallError> {
