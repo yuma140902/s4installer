@@ -50,7 +50,7 @@ fn install_cli(install_type: InstallType, program: &PathBuf) -> Result<(), Insta
     match install_type {
         InstallType::Copy => install_cli_copy(&s4dir, program),
         InstallType::Lnk => install_cli_lnk(&s4dir, program),
-        InstallType::Sym => todo!(),
+        InstallType::Sym => install_cli_symlink(&s4dir, program),
         InstallType::Pwsh => todo!(),
     }
 }
@@ -92,6 +92,23 @@ fn install_cli_lnk(s4dir: &PathBuf, program: &PathBuf) -> Result<(), InstallErro
     eprintln!("creating a shell link `{}`", destination.to_string_lossy());
     lnk.create_lnk(destination)
         .map_err(|err| InstallError::FileIO(err))?;
+
+    Ok(())
+}
+
+fn install_cli_symlink(s4dir: &PathBuf, program: &PathBuf) -> Result<(), InstallError> {
+    let program = program
+        .absolutize()
+        .map_err(|err| InstallError::FileIO(err))?;
+
+    let dest = get_destination_file(s4dir, &program).map_err(|_| InstallError::NoProgram)?;
+
+    eprintln!(
+        "creating symlink `{}` -> `{}`",
+        dest.to_string_lossy(),
+        program.to_string_lossy()
+    );
+    symlink::symlink_file(program, dest).map_err(|err| InstallError::FileIO(err))?;
 
     Ok(())
 }
