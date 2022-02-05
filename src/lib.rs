@@ -33,7 +33,7 @@ pub fn install(install_type: InstallType, install_registry: InstallRegistry, pro
 
 #[derive(Debug)]
 enum InstallError {
-    AccessS4Dir,
+    AccessTargetDir,
     NoProgram,
     AlreadyExists,
     FileIO(std::io::Error),
@@ -45,19 +45,19 @@ fn install_cli(install_type: InstallType, program: &PathBuf) -> Result<(), Insta
         return Err(InstallError::NoProgram);
     }
 
-    let s4dir = get_s4dir().ok_or_else(|| InstallError::AccessS4Dir)?;
+    let s4dir = get_s4dir().ok_or_else(|| InstallError::AccessTargetDir)?;
     eprintln!("{} に手動でPATHを通してください", s4dir.to_string_lossy());
 
     match install_type {
-        InstallType::Copy => install_cli_copy(&s4dir, program),
-        InstallType::Lnk => install_cli_lnk(&s4dir, program),
-        InstallType::Sym => install_cli_symlink(&s4dir, program),
-        InstallType::Pwsh => install_cli_pwsh(&s4dir, program),
+        InstallType::Copy => install_copy(&s4dir, program),
+        InstallType::Lnk => install_lnk(&s4dir, program),
+        InstallType::Sym => install_symlink(&s4dir, program),
+        InstallType::Pwsh => install_pwsh(&s4dir, program),
     }
 }
 
-fn install_cli_copy(s4dir: &PathBuf, program: &PathBuf) -> Result<(), InstallError> {
-    let dest = get_destination_file(s4dir, program).map_err(|_| InstallError::NoProgram)?;
+fn install_copy(target_dir: &PathBuf, program: &PathBuf) -> Result<(), InstallError> {
+    let dest = get_destination_file(target_dir, program).map_err(|_| InstallError::NoProgram)?;
     if dest.is_file() {
         return Err(InstallError::AlreadyExists);
     }
@@ -72,7 +72,7 @@ fn install_cli_copy(s4dir: &PathBuf, program: &PathBuf) -> Result<(), InstallErr
     Ok(())
 }
 
-fn install_cli_lnk(s4dir: &PathBuf, program: &PathBuf) -> Result<(), InstallError> {
+fn install_lnk(target_dir: &PathBuf, program: &PathBuf) -> Result<(), InstallError> {
     let program = program
         .absolutize()
         .map_err(|err| InstallError::FileIO(err))?;
@@ -87,7 +87,7 @@ fn install_cli_lnk(s4dir: &PathBuf, program: &PathBuf) -> Result<(), InstallErro
     )));
 
     let mut destination =
-        get_destination_file(s4dir, &program).map_err(|_| InstallError::NoProgram)?;
+        get_destination_file(target_dir, &program).map_err(|_| InstallError::NoProgram)?;
     destination.set_extension("lnk");
 
     eprintln!("creating a shell link `{}`", destination.to_string_lossy());
@@ -97,12 +97,12 @@ fn install_cli_lnk(s4dir: &PathBuf, program: &PathBuf) -> Result<(), InstallErro
     Ok(())
 }
 
-fn install_cli_symlink(s4dir: &PathBuf, program: &PathBuf) -> Result<(), InstallError> {
+fn install_symlink(target_dir: &PathBuf, program: &PathBuf) -> Result<(), InstallError> {
     let program = program
         .absolutize()
         .map_err(|err| InstallError::FileIO(err))?;
 
-    let dest = get_destination_file(s4dir, &program).map_err(|_| InstallError::NoProgram)?;
+    let dest = get_destination_file(target_dir, &program).map_err(|_| InstallError::NoProgram)?;
 
     eprintln!(
         "creating symlink `{}` -> `{}`",
@@ -114,7 +114,7 @@ fn install_cli_symlink(s4dir: &PathBuf, program: &PathBuf) -> Result<(), Install
     Ok(())
 }
 
-fn install_cli_pwsh(s4dir: &PathBuf, program: &PathBuf) -> Result<(), InstallError> {
+fn install_pwsh(target_dir: &PathBuf, program: &PathBuf) -> Result<(), InstallError> {
     let program = program
         .absolutize()
         .map_err(|err| InstallError::FileIO(err))?;
@@ -134,7 +134,7 @@ fn install_cli_pwsh(s4dir: &PathBuf, program: &PathBuf) -> Result<(), InstallErr
     )));
 
     let mut destination =
-        get_destination_file(s4dir, &program).map_err(|_| InstallError::NoProgram)?;
+        get_destination_file(target_dir, &program).map_err(|_| InstallError::NoProgram)?;
     destination.set_extension("lnk");
 
     eprintln!("creating a shell link `{}`", destination.to_string_lossy());
