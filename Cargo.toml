@@ -8,3 +8,4 @@ authors = ["yuma140902"]
 
 [dependencies]
 clap = { version = "3", features = ["derive"] }
+dirs = "4"
