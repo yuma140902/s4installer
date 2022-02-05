@@ -23,7 +23,7 @@ enum AppSubCommand {
     /// Installs a program
     Install {
         #[clap(arg_enum, long = "type")]
-        /// copyはコピー、lnkはショートカット作成、symはシンボリックリンク作成、pwshはPowershellで対象のps1ファイルをいい感じに実行するように設定する。exeならlnk、ps1ならpwshを推奨
+        /// copyはコピー、lnkはショートカット作成、symはシンボリックリンク作成、pwshはPowershellで対象のps1ファイルをいい感じに実行するように設定する。sendtoかつexeならlnk、cliかつexeならsym、ps1ならpwshを推奨
         install_type: InstallType,
 
         #[clap(arg_enum, long = "for", value_name = "REGISTRY")]
