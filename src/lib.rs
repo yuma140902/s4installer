@@ -72,8 +72,12 @@ fn install_copy(target_dir: &PathBuf, program: &PathBuf) -> Result<(), InstallEr
     Ok(())
 }
 
-fn install_lnk(target_dir: &PathBuf, program: &PathBuf) -> Result<(), InstallError> {
+fn install_lnk(
+    target_dir: impl AsRef<Path>,
+    program: impl AsRef<Path>,
+) -> Result<(), InstallError> {
     let program = program
+        .as_ref()
         .absolutize()
         .map_err(|err| InstallError::FileIO(err))?;
 
@@ -97,8 +101,12 @@ fn install_lnk(target_dir: &PathBuf, program: &PathBuf) -> Result<(), InstallErr
     Ok(())
 }
 
-fn install_symlink(target_dir: &PathBuf, program: &PathBuf) -> Result<(), InstallError> {
+fn install_symlink(
+    target_dir: impl AsRef<Path>,
+    program: impl AsRef<Path>,
+) -> Result<(), InstallError> {
     let program = program
+        .as_ref()
         .absolutize()
         .map_err(|err| InstallError::FileIO(err))?;
 
@@ -114,8 +122,12 @@ fn install_symlink(target_dir: &PathBuf, program: &PathBuf) -> Result<(), Instal
     Ok(())
 }
 
-fn install_pwsh(target_dir: &PathBuf, program: &PathBuf) -> Result<(), InstallError> {
+fn install_pwsh(
+    target_dir: impl AsRef<Path>,
+    program: impl AsRef<Path>,
+) -> Result<(), InstallError> {
     let program = program
+        .as_ref()
         .absolutize()
         .map_err(|err| InstallError::FileIO(err))?;
 
