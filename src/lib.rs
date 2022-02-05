@@ -2,7 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use clap::ArgEnum;
-use mslnk::ShellLink;
+use mslnk::{ShellLink, ShowCommand};
 use path_absolutize::*;
 
 #[derive(ArgEnum, Debug, PartialEq, Clone, Copy)]
@@ -37,6 +37,7 @@ enum InstallError {
     NoProgram,
     AlreadyExists,
     FileIO(std::io::Error),
+    NoPowerShellCore(which::Error),
 }
 
 fn install_cli(install_type: InstallType, program: &PathBuf) -> Result<(), InstallError> {
@@ -51,7 +52,7 @@ fn install_cli(install_type: InstallType, program: &PathBuf) -> Result<(), Insta
         InstallType::Copy => install_cli_copy(&s4dir, program),
         InstallType::Lnk => install_cli_lnk(&s4dir, program),
         InstallType::Sym => install_cli_symlink(&s4dir, program),
-        InstallType::Pwsh => todo!(),
+        InstallType::Pwsh => install_cli_pwsh(&s4dir, program),
     }
 }
 
@@ -109,6 +110,36 @@ fn install_cli_symlink(s4dir: &PathBuf, program: &PathBuf) -> Result<(), Install
         program.to_string_lossy()
     );
     symlink::symlink_file(program, dest).map_err(|err| InstallError::FileIO(err))?;
+
+    Ok(())
+}
+
+fn install_cli_pwsh(s4dir: &PathBuf, program: &PathBuf) -> Result<(), InstallError> {
+    let program = program
+        .absolutize()
+        .map_err(|err| InstallError::FileIO(err))?;
+
+    let pwsh = which::which("pwsh").map_err(|err| InstallError::NoPowerShellCore(err))?;
+
+    let mut lnk = ShellLink::new(&pwsh).map_err(|err| InstallError::FileIO(err))?;
+    lnk.set_arguments(Some(format!("-noprofile {}", program.to_string_lossy())));
+    lnk.header_mut()
+        .set_show_command(ShowCommand::ShowMinNoActive);
+    if let Some(program_dir) = program.parent() {
+        lnk.set_working_dir(program_dir.to_str().map(|s| s.to_string()));
+    }
+    lnk.set_name(Some(format!(
+        "Installed by s4 installer v{}",
+        env!("CARGO_PKG_VERSION")
+    )));
+
+    let mut destination =
+        get_destination_file(s4dir, &program).map_err(|_| InstallError::NoProgram)?;
+    destination.set_extension("lnk");
+
+    eprintln!("creating a shell link `{}`", destination.to_string_lossy());
+    lnk.create_lnk(destination)
+        .map_err(|err| InstallError::FileIO(err))?;
 
     Ok(())
 }
