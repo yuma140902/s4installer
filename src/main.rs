@@ -30,6 +30,10 @@ enum AppSubCommand {
         /// cliならパスを通すことでCLIから使えるようにする。sendtoならエクスプローラーの「送る」メニューに追加する。
         install_for: InstallRegistry,
 
+        #[clap(long)]
+        /// インストール先での名前
+        name: Option<String>,
+
         #[clap(value_name = "PROGRAM")]
         path_to_program: PathBuf,
     },
@@ -54,8 +58,9 @@ fn main() {
         AppSubCommand::Install {
             install_type,
             install_for,
+            name,
             path_to_program,
-        } => s4installer::install(install_type, install_for, path_to_program),
+        } => s4installer::install(install_type, install_for, name, path_to_program),
         AppSubCommand::Uninstall { from, program_name } => {
             s4installer::uninstall(from, program_name)
         }

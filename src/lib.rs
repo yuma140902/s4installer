@@ -20,10 +20,15 @@ pub enum InstallRegistry {
     SendTo,
 }
 
-pub fn install(install_type: InstallType, install_registry: InstallRegistry, program: PathBuf) {
+pub fn install(
+    install_type: InstallType,
+    install_registry: InstallRegistry,
+    name: Option<String>,
+    program: PathBuf,
+) {
     let result = match install_registry {
-        InstallRegistry::Cli => install_cli(install_type, &program),
-        InstallRegistry::SendTo => install_sendto(install_type, &program),
+        InstallRegistry::Cli => install_cli(install_type, &name, &program),
+        InstallRegistry::SendTo => install_sendto(install_type, &name, &program),
     };
     if let Err(err) = result {
         eprintln!("Error during installing");
@@ -40,7 +45,11 @@ enum InstallError {
     NoPowerShellCore(which::Error),
 }
 
-fn install_cli(install_type: InstallType, program: &PathBuf) -> Result<(), InstallError> {
+fn install_cli(
+    install_type: InstallType,
+    name: &Option<String>,
+    program: &PathBuf,
+) -> Result<(), InstallError> {
     if !program.is_file() {
         return Err(InstallError::NoProgram);
     }
@@ -49,14 +58,18 @@ fn install_cli(install_type: InstallType, program: &PathBuf) -> Result<(), Insta
     eprintln!("{} に手動でPATHを通してください", s4dir.to_string_lossy());
 
     match install_type {
-        InstallType::Copy => install_copy(&s4dir, program),
-        InstallType::Lnk => install_lnk(&s4dir, program),
-        InstallType::Sym => install_symlink(&s4dir, program),
-        InstallType::Pwsh => install_pwsh(&s4dir, program),
+        InstallType::Copy => install_copy(&s4dir, name, program),
+        InstallType::Lnk => install_lnk(&s4dir, name, program),
+        InstallType::Sym => install_symlink(&s4dir, name, program),
+        InstallType::Pwsh => install_pwsh(&s4dir, name, program),
     }
 }
 
-fn install_sendto(install_type: InstallType, program: &PathBuf) -> Result<(), InstallError> {
+fn install_sendto(
+    install_type: InstallType,
+    name: &Option<String>,
+    program: &PathBuf,
+) -> Result<(), InstallError> {
     if !program.is_file() {
         return Err(InstallError::NoProgram);
     }
@@ -64,15 +77,20 @@ fn install_sendto(install_type: InstallType, program: &PathBuf) -> Result<(), In
     let sendto = get_sendto_dir().ok_or_else(|| InstallError::AccessTargetDir)?;
 
     match install_type {
-        InstallType::Copy => install_copy(&sendto, program),
-        InstallType::Lnk => install_lnk(&sendto, program),
-        InstallType::Sym => install_symlink(&sendto, program),
-        InstallType::Pwsh => install_pwsh(&sendto, program),
+        InstallType::Copy => install_copy(&sendto, name, program),
+        InstallType::Lnk => install_lnk(&sendto, name, program),
+        InstallType::Sym => install_symlink(&sendto, name, program),
+        InstallType::Pwsh => install_pwsh(&sendto, name, program),
     }
 }
 
-fn install_copy(target_dir: &PathBuf, program: &PathBuf) -> Result<(), InstallError> {
-    let dest = get_destination_file(target_dir, program).map_err(|_| InstallError::NoProgram)?;
+fn install_copy(
+    target_dir: &PathBuf,
+    name: &Option<String>,
+    program: &PathBuf,
+) -> Result<(), InstallError> {
+    let dest = get_destination_file(target_dir, name, program, None)
+        .map_err(|_| InstallError::NoProgram)?;
     if dest.is_file() {
         return Err(InstallError::AlreadyExists);
     }
@@ -89,6 +107,7 @@ fn install_copy(target_dir: &PathBuf, program: &PathBuf) -> Result<(), InstallEr
 
 fn install_lnk(
     target_dir: impl AsRef<Path>,
+    name: &Option<String>,
     program: impl AsRef<Path>,
 ) -> Result<(), InstallError> {
     let program = program
@@ -105,9 +124,8 @@ fn install_lnk(
         env!("CARGO_PKG_VERSION")
     )));
 
-    let mut destination =
-        get_destination_file(target_dir, &program).map_err(|_| InstallError::NoProgram)?;
-    destination.set_extension("lnk");
+    let destination = get_destination_file(target_dir, name, &program, Some("lnk"))
+        .map_err(|_| InstallError::NoProgram)?;
 
     eprintln!("creating a shell link `{}`", destination.to_string_lossy());
     lnk.create_lnk(destination)
@@ -118,6 +136,7 @@ fn install_lnk(
 
 fn install_symlink(
     target_dir: impl AsRef<Path>,
+    name: &Option<String>,
     program: impl AsRef<Path>,
 ) -> Result<(), InstallError> {
     let program = program
@@ -125,7 +144,8 @@ fn install_symlink(
         .absolutize()
         .map_err(|err| InstallError::FileIO(err))?;
 
-    let dest = get_destination_file(target_dir, &program).map_err(|_| InstallError::NoProgram)?;
+    let dest = get_destination_file(target_dir, name, &program, None)
+        .map_err(|_| InstallError::NoProgram)?;
 
     eprintln!(
         "creating symlink `{}` -> `{}`",
@@ -139,6 +159,7 @@ fn install_symlink(
 
 fn install_pwsh(
     target_dir: impl AsRef<Path>,
+    name: &Option<String>,
     program: impl AsRef<Path>,
 ) -> Result<(), InstallError> {
     let program = program
@@ -160,9 +181,8 @@ fn install_pwsh(
         env!("CARGO_PKG_VERSION")
     )));
 
-    let mut destination =
-        get_destination_file(target_dir, &program).map_err(|_| InstallError::NoProgram)?;
-    destination.set_extension("lnk");
+    let destination = get_destination_file(target_dir, name, &program, Some("lnk"))
+        .map_err(|_| InstallError::NoProgram)?;
 
     eprintln!("creating a shell link `{}`", destination.to_string_lossy());
     lnk.create_lnk(destination)
@@ -183,15 +203,22 @@ fn get_sendto_dir() -> Option<PathBuf> {
 
 fn get_destination_file<P: AsRef<Path>, Q: AsRef<Path>>(
     s4dir: P,
+    name: &Option<String>,
     program: Q,
-) -> Result<PathBuf, ()> {
-    let program_name: String;
-    if let Some(file_name) = program.as_ref().file_name() {
-        program_name = file_name.to_string_lossy().to_string();
+    extension: Option<&str>,
+) -> Result<PathBuf, InstallError> {
+    let program_name = if let Some(name) = name {
+        name.to_string()
+    } else if let Some(file_name) = program.as_ref().file_name() {
+        file_name.to_string_lossy().to_string()
     } else {
-        return Err(());
+        return Err(InstallError::NoProgram);
+    };
+    let mut dest = s4dir.as_ref().join(program_name);
+    if let Some(extension) = extension {
+        dest.set_extension(extension);
     }
-    Ok(s4dir.as_ref().join(program_name))
+    Ok(dest)
 }
 
 pub fn uninstall(_install_registry: InstallRegistry, _name: String) {
