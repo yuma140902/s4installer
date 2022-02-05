@@ -56,6 +56,21 @@ fn install_cli(install_type: InstallType, program: &PathBuf) -> Result<(), Insta
     }
 }
 
+fn install_sendto(install_type: InstallType, program: &PathBuf) -> Result<(), InstallError> {
+    if !program.is_file() {
+        return Err(InstallError::NoProgram);
+    }
+
+    let sendto = get_sendto_dir().ok_or_else(|| InstallError::AccessTargetDir)?;
+
+    match install_type {
+        InstallType::Copy => install_copy(&sendto, program),
+        InstallType::Lnk => install_lnk(&sendto, program),
+        InstallType::Sym => install_symlink(&sendto, program),
+        InstallType::Pwsh => install_pwsh(&sendto, program),
+    }
+}
+
 fn install_copy(target_dir: &PathBuf, program: &PathBuf) -> Result<(), InstallError> {
     let dest = get_destination_file(target_dir, program).map_err(|_| InstallError::NoProgram)?;
     if dest.is_file() {
@@ -156,13 +171,14 @@ fn install_pwsh(
     Ok(())
 }
 
-fn install_sendto(_install_type: InstallType, _program: &PathBuf) -> Result<(), InstallError> {
-    todo!()
-}
-
 fn get_s4dir() -> Option<PathBuf> {
     let home = dirs::home_dir()?;
     Some(home.join("s4\\scripts"))
+}
+
+fn get_sendto_dir() -> Option<PathBuf> {
+    let home = dirs::home_dir()?;
+    Some(home.join(r"AppData\Roaming\Microsoft\Windows\SendTo"))
 }
 
 fn get_destination_file<P: AsRef<Path>, Q: AsRef<Path>>(
