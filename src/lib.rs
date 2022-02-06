@@ -331,7 +331,18 @@ fn get_program_exts() -> Vec<String> {
 }
 
 fn is_program_file(file: impl AsRef<Path>, program_exts: &Vec<String>) -> bool {
-    if let Some(ext) = file.as_ref().extension() {
+    let file = file.as_ref();
+    let file = if file.is_symlink() {
+        if let Ok(f) = file.read_link() {
+            f
+        } else {
+            return false;
+        }
+    } else {
+        file.to_path_buf()
+    };
+
+    if let Some(ext) = file.extension() {
         program_exts.contains(&ext.to_string_lossy().to_ascii_lowercase())
     } else {
         false
